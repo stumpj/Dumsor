@@ -8,7 +8,7 @@
 
     <string name="action_settings">Settings</string>
 
-    <string name="facebook_app_id">1468171926829807</string>
+    <string name="facebook_app_id">515608521938203</string>
 
     <style name="ButtonText">
         <item name="android:layout_width">fill_parent</item>
