@@ -9,6 +9,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,21 +21,27 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.parse.ParseException;
+import com.parse.ParseObject;
+
 import java.util.Timer;
 import java.util.TimerTask;
 
 
-//TODO Implement Parse.
-
 public class MainActivity extends Activity {
 
-    private static final int MAX_CONNECT_TRIES = 4;
+    private static final int MAX_CONNECT_TRIES = 3;
     private static final int WAIT_TIME = 2000;
+    private static final String LAT = "lat";
+    private static final String LNG = "lng";
     private SharedPreferences sharedPreferences;
     private LocationManager locationManager;
     private LocationListener locationListener;
     private TextView lat;
     private TextView lng;
+    private long previousTime;
+    private int power;
+    private ToggleButton toggleButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,12 +50,20 @@ public class MainActivity extends Activity {
 
         sharedPreferences = this.getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
+        toggleButton = (ToggleButton) findViewById(R.id.powerToggleButton);
         ImageView imgView = (ImageView) findViewById(R.id.imageView);
         imgView.setImageResource(R.drawable.dumsor_launcher);
+
+        RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
+        rl.setBackgroundColor(Color.WHITE);
+
+
 
 
         lat = (TextView) findViewById(R.id.text_lat);
         lng = (TextView) findViewById(R.id.text_lng);
+        previousTime = 0;
+        power = 0;
 
         locationManager = (LocationManager)
                 getSystemService(Context.LOCATION_SERVICE);
@@ -58,11 +73,10 @@ public class MainActivity extends Activity {
 
             @Override
             public void onLocationChanged(Location location) {
-                Toast.makeText(MainActivity.this, "Loc Change", Toast.LENGTH_SHORT).show();
                 sharedPreferences
                         .edit()
-                        .putString("lat", Double.toString(location.getLatitude()))
-                        .putString("lng", Double.toString((location.getLongitude())))
+                        .putString(LAT, Double.toString(location.getLatitude()))
+                        .putString(LNG, Double.toString((location.getLongitude())))
                         .apply();
             }
 
@@ -84,13 +98,12 @@ public class MainActivity extends Activity {
         //establish connections via GPS or netwrok
         checkConnections();
 
-        final ToggleButton tb = (ToggleButton) findViewById(R.id.powerToggleButton);
-        tb.setChecked(true);
-        tb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+        toggleButton.setChecked(false);
+        toggleButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
-                tb.setEnabled(false);
+                toggleButton.setEnabled(false);
 
 
                 Timer buttonTimer = new Timer();
@@ -102,47 +115,29 @@ public class MainActivity extends Activity {
 
                             @Override
                             public void run() {
-                                tb.setEnabled(true);
+                                toggleButton.setEnabled(true);
                             }
                         });
                     }
                 }, 5000); //was set at 60000 - 5 sec for testing
 
                 if (isChecked) {
-                    rl.setBackgroundColor(Color.WHITE);
-                    Toast.makeText(getApplicationContext(), getString(R.string
-                            .main_power_on_message), Toast.LENGTH_LONG).show();
-                    recordLocation(1);
-                } else {
                     rl.setBackgroundColor(Color.BLACK);
                     Toast.makeText(getApplicationContext(), getString(R.string
                             .main_power_off_message), Toast.LENGTH_LONG).show();
+                    power = 1;
+                    recordLocation(1);
+                } else {
+                    rl.setBackgroundColor(Color.WHITE);
+                    Toast.makeText(getApplicationContext(), getString(R.string
+                            .main_power_on_message), Toast.LENGTH_LONG).show();
+                    power = 0;
                     recordLocation(0);
                 }
             }
         });
     }
 
-    /**
-     * Record the current location of the user to cloud services.
-     *
-     * @param powerStatus If the power is off (0) or on (1).
-     */
-    private void recordLocation(int powerStatus) {
-
-        String testConnection = sharedPreferences.getString("location", null);
-        //If connected via GPS update lat and lng, run a background thread to look for location update
-        if("GPS".equals(testConnection) || "NETWORK".equals(testConnection)) {
-
-            AsyncNetwork asyncNetwork = new AsyncNetwork();
-            asyncNetwork.execute();
-
-        //if not connected, recheck connections
-        } else {
-            Toast.makeText(MainActivity.this, "Cannot find Location - turn on GPS or connect to Network.", Toast.LENGTH_SHORT).show();
-        }
-
-    }
 
     /**
      * Check and start location services for the best available connection.
@@ -177,6 +172,55 @@ public class MainActivity extends Activity {
             return false;
         }
 
+    }
+
+    /**
+     * Record the current location of the user to cloud services.
+     *
+     * @param powerStatus If the power is off (0) or on (1).
+     */
+    private void recordLocation(int powerStatus) {
+
+        if(powerStatus == 0) previousTime = System.currentTimeMillis();
+
+
+        String testConnection = sharedPreferences.getString("location", null);
+        //If connected via GPS update lat and lng, run a background thread to look for location update
+        if("GPS".equals(testConnection) || "NETWORK".equals(testConnection)) {
+
+            AsyncNetwork asyncNetwork = new AsyncNetwork();
+            asyncNetwork.execute();
+
+        //if not connected, recheck connections
+        } else {
+            Toast.makeText(MainActivity.this, "Cannot find Location - turn on GPS or connect to Network.", Toast.LENGTH_SHORT).show();
+        }
+
+    }
+
+    /**
+     * Saves data to Parse cloud service.
+     */
+    private void parseSave() {
+
+            long currentTime = System.currentTimeMillis();
+
+            ParseObject powerRecord = new ParseObject("Power");
+            powerRecord.put("auth", sharedPreferences.getString("login", null));
+            powerRecord.put("source", sharedPreferences.getString("uid", null));
+            powerRecord.put("lat", Double.parseDouble(sharedPreferences.getString("lat", null)));
+            powerRecord.put("long", Double.parseDouble(sharedPreferences.getString("lng", null)));
+            powerRecord.put("timestamp", currentTime);
+            if (previousTime == 0) {
+                powerRecord.put("previous", currentTime);
+            } else {
+                powerRecord.put("previous", previousTime);
+            }
+            powerRecord.put("power", power);
+            powerRecord.saveInBackground();
+
+            lat.setText(sharedPreferences.getString("lat", null));
+            lng.setText(sharedPreferences.getString("lng", null));
     }
 
     @Override
@@ -249,6 +293,7 @@ public class MainActivity extends Activity {
                         e.printStackTrace();
                     }
                 } else {
+
                     return true;
 
                 }
@@ -260,18 +305,9 @@ public class MainActivity extends Activity {
         protected void onPostExecute(Boolean result) {
 
             if(result) {
-                sharedPreferences
-                        .edit()
-                        .putString("latold", sharedPreferences.getString("lat", null))
-                        .putString("lngold", sharedPreferences.getString("lng", null))
-                        .apply();
-
-                lat.setText(sharedPreferences.getString("lat", null));
-                lng.setText(sharedPreferences.getString("lng", null));
-
+                parseSave();
             } else {
-                Toast.makeText(MainActivity.this, "No Location Updates Found.", Toast.LENGTH_SHORT).show();
-
+                Toast.makeText(MainActivity.this, "Location unable to be obtained.\nCheck GPS/Network settings.", Toast.LENGTH_SHORT).show();
             }
         }
     }
