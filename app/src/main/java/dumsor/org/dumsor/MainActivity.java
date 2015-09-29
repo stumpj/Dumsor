@@ -103,6 +103,11 @@ public class MainActivity extends Activity {
 
     }
 
+    /**
+     * Check and start location services for the best available connection.
+     *
+     * @return Whether or not a connection was established.
+     */
     private boolean checkConnections() {
         if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             Toast.makeText(MainActivity.this, "GPS Enabled", Toast.LENGTH_SHORT).show();
