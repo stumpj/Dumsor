@@ -49,12 +49,12 @@ public class LoginActivity extends Activity {
 
         final SharedPreferences sharedPreferences = this.getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
-        if (sharedPreferences.contains("login") && sharedPreferences.contains("uid"))
-        {
-            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish();
-        }
+//        if (sharedPreferences.contains("login") && sharedPreferences.contains("uid"))
+//        {
+//            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+//            startActivity(intent);
+//            finish();
+//        }
 
         //Facebook Login
 

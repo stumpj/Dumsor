@@ -3,6 +3,7 @@ package dumsor.org.dumsor;
 import android.app.Activity;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -12,12 +13,18 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
-//TODO Network connection takes time to update, find a way to wait for it to update after button press.
+import java.util.Timer;
+import java.util.TimerTask;
 
-//TODO Implement Facebook login and Parse.
+
+//TODO Implement Parse.
 
 public class MainActivity extends Activity {
 
@@ -35,6 +42,9 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
 
         sharedPreferences = this.getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
+
+        ImageView imgView = (ImageView) findViewById(R.id.imageView);
+        imgView.setImageResource(R.drawable.dumsor_launcher);
 
 
         lat = (TextView) findViewById(R.id.text_lat);
@@ -54,7 +64,6 @@ public class MainActivity extends Activity {
                         .putString("lat", Double.toString(location.getLatitude()))
                         .putString("lng", Double.toString((location.getLongitude())))
                         .apply();
-
             }
 
             @Override
@@ -73,33 +82,65 @@ public class MainActivity extends Activity {
             }
         };
         //establish connections via GPS or netwrok
-       checkConnections();
+        checkConnections();
 
-        final Button locButton = (Button) findViewById(R.id.loc_button);
-        locButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
+        final ToggleButton tb = (ToggleButton) findViewById(R.id.powerToggleButton);
+        tb.setChecked(true);
+        tb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 
-                locButton.setEnabled(false);
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
+                tb.setEnabled(false);
 
-                String testConnection = sharedPreferences.getString("location", null);
-                //If connected via GPS update lat and lng, run a background thread to look for location update
-                if("GPS".equals(testConnection) || "NETWORK".equals(testConnection)) {
 
-                    AsyncNetwork asyncNetwork = new AsyncNetwork();
-                    asyncNetwork.execute();
+                Timer buttonTimer = new Timer();
+                buttonTimer.schedule(new TimerTask() {
 
-                //if not connected, recheck connections
-                } else {
-                    if(!checkConnections()) {
-                        Toast.makeText(MainActivity.this, "Cannot update Location - turn on GPS or connect to Network.", Toast.LENGTH_SHORT).show();
-                    } else {
-                        lat.setText(sharedPreferences.getString("lat", null));
-                        lng.setText(sharedPreferences.getString("lng", null));
+                    @Override
+                    public void run() {
+                        runOnUiThread(new Runnable() {
+
+                            @Override
+                            public void run() {
+                                tb.setEnabled(true);
+                            }
+                        });
                     }
+                }, 5000); //was set at 60000 - 5 sec for testing
+
+                if (isChecked) {
+                    rl.setBackgroundColor(Color.WHITE);
+                    Toast.makeText(getApplicationContext(), getString(R.string
+                            .main_power_on_message), Toast.LENGTH_LONG).show();
+                    recordLocation(1);
+                } else {
+                    rl.setBackgroundColor(Color.BLACK);
+                    Toast.makeText(getApplicationContext(), getString(R.string
+                            .main_power_off_message), Toast.LENGTH_LONG).show();
+                    recordLocation(0);
                 }
             }
         });
+    }
+
+    /**
+     * Record the current location of the user to cloud services.
+     *
+     * @param powerStatus If the power is off (0) or on (1).
+     */
+    private void recordLocation(int powerStatus) {
+
+        String testConnection = sharedPreferences.getString("location", null);
+        //If connected via GPS update lat and lng, run a background thread to look for location update
+        if("GPS".equals(testConnection) || "NETWORK".equals(testConnection)) {
+
+            AsyncNetwork asyncNetwork = new AsyncNetwork();
+            asyncNetwork.execute();
+
+        //if not connected, recheck connections
+        } else {
+            Toast.makeText(MainActivity.this, "Cannot find Location - turn on GPS or connect to Network.", Toast.LENGTH_SHORT).show();
+        }
 
     }
 
@@ -219,11 +260,18 @@ public class MainActivity extends Activity {
         protected void onPostExecute(Boolean result) {
 
             if(result) {
+                sharedPreferences
+                        .edit()
+                        .putString("latold", sharedPreferences.getString("lat", null))
+                        .putString("lngold", sharedPreferences.getString("lng", null))
+                        .apply();
+
                 lat.setText(sharedPreferences.getString("lat", null));
                 lng.setText(sharedPreferences.getString("lng", null));
 
             } else {
                 Toast.makeText(MainActivity.this, "No Location Updates Found.", Toast.LENGTH_SHORT).show();
+
             }
         }
     }
