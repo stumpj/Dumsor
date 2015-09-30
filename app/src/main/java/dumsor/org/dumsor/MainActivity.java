@@ -29,6 +29,8 @@ public class MainActivity extends Activity {
     private static final int WAIT_TIME = 2000;
     private static final String LAT = "lat";
     private static final String LNG = "lng";
+    private static final String GPS = "GPS";
+    private static final String NETWORK = "NETWORK";
     private SharedPreferences sharedPreferences;
     private LocationManager locationManager;
     private LocationListener locationListener;
@@ -138,7 +140,7 @@ public class MainActivity extends Activity {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
             sharedPreferences
                     .edit()
-                    .putString("location", "GPS")
+                    .putString("location", GPS)
                     .apply();
             return true;
         } else if(locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
@@ -147,12 +149,12 @@ public class MainActivity extends Activity {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
             sharedPreferences
                     .edit()
-                    .putString("location", "NETWORK")
+                    .putString("location", NETWORK)
                     .apply();
             return true;
 
         } else {
-            Toast.makeText(MainActivity.this, "No location services found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, getString(R.string.loc_not_found_error), Toast.LENGTH_SHORT).show();
             sharedPreferences
                     .edit()
                     .putString("location", "NONE")
@@ -174,14 +176,14 @@ public class MainActivity extends Activity {
 
         String testConnection = sharedPreferences.getString("location", null);
         //If connected via GPS update lat and lng, run a background thread to look for location update
-        if("GPS".equals(testConnection) || "NETWORK".equals(testConnection)) {
+        if(GPS.equals(testConnection) || NETWORK.equals(testConnection)) {
 
             AsyncNetwork asyncNetwork = new AsyncNetwork();
             asyncNetwork.execute();
 
         //if not connected, recheck connections
         } else {
-            Toast.makeText(MainActivity.this, "Cannot find Location - turn on GPS or connect to Network.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, getString(R.string.loc_not_found_error), Toast.LENGTH_SHORT).show();
         }
 
     }
@@ -235,10 +237,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        if("GPS".equals(sharedPreferences.getString("location", null))) {
+        if(GPS.equals(sharedPreferences.getString("location", null))) {
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
         }
-        if("NETWORK".equals(sharedPreferences.getString("location", null))) {
+        if(NETWORK.equals(sharedPreferences.getString("location", null))) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
         }
     }
@@ -302,7 +304,7 @@ public class MainActivity extends Activity {
                 if(sharedPreferences.getString("latold", null) != null) {
                     parseSave(1);
                 } else {
-                    Toast.makeText(MainActivity.this, "Location unable to be obtained.\nCheck GPS/Network settings.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(MainActivity.this, getString(R.string.loc_not_found_error), Toast.LENGTH_SHORT).show();
                 }
             }
         }
