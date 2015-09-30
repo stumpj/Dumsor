@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -27,6 +28,7 @@ public class MainActivity extends Activity {
 
     private static final int MAX_CONNECT_TRIES = 3;
     private static final int WAIT_TIME = 2000;
+    private static final int POWER_PAUSE = 60000;
     private static final String LAT = "lat";
     private static final String LNG = "lng";
     private static final String GPS = "GPS";
@@ -94,7 +96,7 @@ public class MainActivity extends Activity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
                 toggleButton.setEnabled(false);
-
+                //toggleButton.setVisibility(View.INVISIBLE);
 
                 Timer buttonTimer = new Timer();
                 buttonTimer.schedule(new TimerTask() {
@@ -106,10 +108,11 @@ public class MainActivity extends Activity {
                             @Override
                             public void run() {
                                 toggleButton.setEnabled(true);
+                                //toggleButton.setVisibility(View.VISIBLE);
                             }
                         });
                     }
-                }, 5000); //was set at 60000 - 5 sec for testing
+                }, POWER_PAUSE);
 
                 if (isChecked) {
                     rl.setBackgroundColor(Color.BLACK);
