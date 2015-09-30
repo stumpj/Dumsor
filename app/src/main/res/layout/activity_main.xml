@@ -26,19 +26,4 @@
         android:layout_centerVertical="true"
         android:layout_centerHorizontal="true"/>
 
-    <TextView
-        android:text="latitude"
-        android:id="@+id/text_lat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/powerToggleButton"/>
-
-    <TextView
-        android:text="Longitude"
-        android:id="@+id/text_lng"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/text_lat"/>
-
-
 </RelativeLayout>

@@ -9,19 +9,14 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import com.parse.ParseException;
 import com.parse.ParseObject;
 
 import java.util.Timer;
@@ -37,8 +32,6 @@ public class MainActivity extends Activity {
     private SharedPreferences sharedPreferences;
     private LocationManager locationManager;
     private LocationListener locationListener;
-    private TextView lat;
-    private TextView lng;
     private long previousTime;
     private int power;
     private ToggleButton toggleButton;
@@ -57,11 +50,6 @@ public class MainActivity extends Activity {
         RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
         rl.setBackgroundColor(Color.WHITE);
 
-
-
-
-        lat = (TextView) findViewById(R.id.text_lat);
-        lng = (TextView) findViewById(R.id.text_lng);
         previousTime = 0;
         power = 0;
 
@@ -201,26 +189,30 @@ public class MainActivity extends Activity {
     /**
      * Saves data to Parse cloud service.
      */
-    private void parseSave() {
+    private void parseSave(int age) {
 
-            long currentTime = System.currentTimeMillis();
+        long currentTime = System.currentTimeMillis();
 
-            ParseObject powerRecord = new ParseObject("Power");
-            powerRecord.put("auth", sharedPreferences.getString("login", null));
-            powerRecord.put("source", sharedPreferences.getString("uid", null));
+        ParseObject powerRecord = new ParseObject("Power");
+        powerRecord.put("auth", sharedPreferences.getString("login", null));
+        powerRecord.put("source", sharedPreferences.getString("uid", null));
+
+        if(age == 0) {
             powerRecord.put("lat", Double.parseDouble(sharedPreferences.getString("lat", null)));
             powerRecord.put("long", Double.parseDouble(sharedPreferences.getString("lng", null)));
-            powerRecord.put("timestamp", currentTime);
-            if (previousTime == 0) {
-                powerRecord.put("previous", currentTime);
-            } else {
-                powerRecord.put("previous", previousTime);
-            }
-            powerRecord.put("power", power);
-            powerRecord.saveInBackground();
+        } else {
+            powerRecord.put("lat", Double.parseDouble(sharedPreferences.getString("latold", null)));
+            powerRecord.put("long", Double.parseDouble(sharedPreferences.getString("lngold", null)));
+        }
+        powerRecord.put("timestamp", currentTime);
+        if (previousTime == 0) {
+            powerRecord.put("previous", currentTime);
+        } else {
+            powerRecord.put("previous", previousTime);
+        }
+        powerRecord.put("power", power);
+        powerRecord.saveInBackground();
 
-            lat.setText(sharedPreferences.getString("lat", null));
-            lng.setText(sharedPreferences.getString("lng", null));
     }
 
     @Override
@@ -305,9 +297,13 @@ public class MainActivity extends Activity {
         protected void onPostExecute(Boolean result) {
 
             if(result) {
-                parseSave();
+                parseSave(0);
             } else {
-                Toast.makeText(MainActivity.this, "Location unable to be obtained.\nCheck GPS/Network settings.", Toast.LENGTH_SHORT).show();
+                if(sharedPreferences.getString("latold", null) != null) {
+                    parseSave(1);
+                } else {
+                    Toast.makeText(MainActivity.this, "Location unable to be obtained.\nCheck GPS/Network settings.", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
