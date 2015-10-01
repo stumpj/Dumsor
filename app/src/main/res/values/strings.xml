@@ -8,7 +8,7 @@
 
     <string name="loc_not_found_error">Location could not be found\nCheck GPS/Network settings.</string>
 
-    <string name="action_settings">Settings</string>
+    <string name="action_settings">Logout</string>
 
     <string name="facebook_app_id">515608521938203</string>
 

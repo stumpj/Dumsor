@@ -2,6 +2,7 @@ package dumsor.org.dumsor;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.Location;
@@ -12,14 +13,18 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.webkit.CookieSyncManager;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
+import com.facebook.login.LoginManager;
 import com.parse.ParseObject;
+import com.twitter.sdk.android.Twitter;
 
+import java.net.CookieManager;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -96,7 +101,7 @@ public class MainActivity extends Activity {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                 RelativeLayout rl = (RelativeLayout) findViewById(R.id.layout_screen);
                 toggleButton.setEnabled(false);
-                //toggleButton.setVisibility(View.INVISIBLE);
+                toggleButton.setVisibility(View.INVISIBLE);
 
                 Timer buttonTimer = new Timer();
                 buttonTimer.schedule(new TimerTask() {
@@ -108,7 +113,7 @@ public class MainActivity extends Activity {
                             @Override
                             public void run() {
                                 toggleButton.setEnabled(true);
-                                //toggleButton.setVisibility(View.VISIBLE);
+                                toggleButton.setVisibility(View.VISIBLE);
                             }
                         });
                     }
@@ -220,6 +225,35 @@ public class MainActivity extends Activity {
 
     }
 
+    /**
+     * Log out of app, return to main menu.
+     */
+    public void logout() {
+
+        String login = sharedPreferences.getString("login", null);
+
+        if("Facebook".equals(login)) {
+
+            LoginManager.getInstance().logOut();
+
+        } else if ("Twitter".equals(login)) {
+
+            Twitter.getSessionManager().clearActiveSession();
+            Twitter.logOut();
+
+        }
+
+        sharedPreferences
+                .edit()
+                .remove("login")
+                .remove("uid")
+                .apply();
+
+        Intent i = new Intent(getApplicationContext(),LoginActivity.class);
+        startActivity(i);
+        finish();
+    }
+
     @Override
     protected void onPause() {
         super.onPause();
@@ -264,6 +298,7 @@ public class MainActivity extends Activity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            logout();
             return true;
         }
 
