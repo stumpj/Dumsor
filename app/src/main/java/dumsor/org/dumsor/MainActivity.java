@@ -10,6 +10,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -20,9 +21,23 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.facebook.login.LoginManager;
+import com.parse.FindCallback;
+import com.parse.FunctionCallback;
+import com.parse.GetCallback;
+import com.parse.LogInCallback;
+import com.parse.Parse;
+import com.parse.ParseACL;
+import com.parse.ParseAnonymousUtils;
+import com.parse.ParseCloud;
+import com.parse.ParseException;
 import com.parse.ParseObject;
+import com.parse.ParseQuery;
+import com.parse.ParseRole;
+import com.parse.ParseUser;
+import com.parse.SignUpCallback;
 import com.twitter.sdk.android.Twitter;
 
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -48,6 +63,20 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        //Log in to parse anonymously
+        ParseAnonymousUtils.logIn(new LogInCallback() {
+            @Override
+            public void done(ParseUser parseUser, ParseException e) {
+
+                if (e != null) {
+                    Log.d("MainActivity", "Login failed");
+                } else {
+                    parseUser.saveInBackground();
+
+                }
+            }
+        });
 
         sharedPreferences = this.getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
@@ -198,15 +227,17 @@ public class MainActivity extends Activity {
     /**
      * Saves data to Parse cloud service.
      */
-    private void parseSave(int age) {
+    private void parseSave(final int age) {
+
 
         long currentTime = System.currentTimeMillis();
 
         ParseObject powerRecord = new ParseObject("Power");
+
         powerRecord.put("auth", sharedPreferences.getString("login", null));
         powerRecord.put("source", sharedPreferences.getString("uid", null));
 
-        if(age == 0) {
+        if (age == 0) {
             powerRecord.put("lat", Double.parseDouble(sharedPreferences.getString("lat", null)));
             powerRecord.put("long", Double.parseDouble(sharedPreferences.getString("lng", null)));
         } else {
@@ -221,7 +252,6 @@ public class MainActivity extends Activity {
         }
         powerRecord.put("power", power);
         powerRecord.saveInBackground();
-
     }
 
     /**
