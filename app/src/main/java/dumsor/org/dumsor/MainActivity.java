@@ -21,6 +21,9 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.facebook.login.LoginManager;
+import com.microsoft.windowsazure.mobileservices.MobileServiceClient;
+import com.microsoft.windowsazure.mobileservices.http.ServiceFilterResponse;
+import com.microsoft.windowsazure.mobileservices.table.TableOperationCallback;
 import com.parse.FindCallback;
 import com.parse.FunctionCallback;
 import com.parse.GetCallback;
@@ -37,6 +40,7 @@ import com.parse.ParseUser;
 import com.parse.SignUpCallback;
 import com.twitter.sdk.android.Twitter;
 
+import java.net.MalformedURLException;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -58,6 +62,7 @@ public class MainActivity extends Activity {
     private long previousTime;
     private int power;
     private ToggleButton toggleButton;
+    private MobileServiceClient mClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,7 +81,19 @@ public class MainActivity extends Activity {
 
                 }
             }
+
+
         });
+
+        try {
+            mClient = new MobileServiceClient(
+                    "https://dumortest.azure-mobile.net/",
+                    "dAwHNatRmDTzFZUGTgDVXNaWqoEtRS55",
+                    this
+            );
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
 
         sharedPreferences = this.getSharedPreferences(getString(R.string.app_name), MODE_PRIVATE);
 
@@ -171,7 +188,16 @@ public class MainActivity extends Activity {
      * @return Whether or not a connection was established.
      */
     private boolean checkConnections() {
-        if(locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        LocationManager manager = (LocationManager) this.getSystemService(Context.LOCATION_SERVICE);
+        boolean isGpsEnabled = manager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean isNetworkEnabled = manager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        if (isGpsEnabled && !isNetworkEnabled) {
+            Location location = manager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        } else {
+            Location location = manager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        }
+
+        if(isGpsEnabled || locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             Toast.makeText(MainActivity.this, "GPS Enabled", Toast.LENGTH_SHORT).show();
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
             sharedPreferences
@@ -179,7 +205,7 @@ public class MainActivity extends Activity {
                     .putString("location", GPS)
                     .apply();
             return true;
-        } else if(locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+        } else if(isNetworkEnabled || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             Toast.makeText(MainActivity.this, "Network Enabled", Toast.LENGTH_SHORT).show();
 
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 0, 0, locationListener);
@@ -252,6 +278,48 @@ public class MainActivity extends Activity {
         }
         powerRecord.put("power", power);
         powerRecord.saveInBackground();
+    }
+
+    private void azureSave(final int age) {
+
+        long currentTime = System.currentTimeMillis();
+
+        Point pt = new Point();
+
+        pt.auth = sharedPreferences.getString("login", null);
+        pt.source = sharedPreferences.getString("uid", null);
+
+
+
+        if (age == 0) {
+            pt.lat = Double.parseDouble(sharedPreferences.getString("lat", null));
+            pt.lng = Double.parseDouble(sharedPreferences.getString("lng", null));
+        } else {
+            pt.lat = Double.parseDouble(sharedPreferences.getString("latold", null));
+            pt.lng = Double.parseDouble(sharedPreferences.getString("lngold", null));
+        }
+
+        pt.timestamp = currentTime;
+
+        if (previousTime == 0) {
+            pt.previous = currentTime;
+        } else {
+            pt.previous = previousTime;
+        }
+
+        pt.power = power;
+
+        //powerRecord.saveInBackground();
+
+        mClient.getTable(Point.class).insert(pt, new TableOperationCallback<Point>() {
+            public void onCompleted(Point entity, Exception exception, ServiceFilterResponse response) {
+                if (exception == null) {
+                    Log.i("MainAcitivity", "Insert worked");
+                } else {
+                    Log.i("MainAcitivity", "Insert failed");
+                }
+            }
+        });
     }
 
     /**
@@ -366,10 +434,12 @@ public class MainActivity extends Activity {
         protected void onPostExecute(Boolean result) {
 
             if(result) {
-                parseSave(0);
+                azureSave(0);
+                //parseSave(0);
             } else {
                 if(sharedPreferences.getString("latold", null) != null) {
-                    parseSave(1);
+                    //parseSave(1);
+                    azureSave(1);
                 } else {
                     Toast.makeText(MainActivity.this, getString(R.string.loc_not_found_error), Toast.LENGTH_SHORT).show();
                 }

@@ -16,7 +16,7 @@
         android:textOn="Power On"
         android:layout_below="@+id/imageView"
         android:layout_centerHorizontal="true"
-        style="@style/ButtonText"  />
+        style="@style/ButtonText"/>
 
 
     <ImageView

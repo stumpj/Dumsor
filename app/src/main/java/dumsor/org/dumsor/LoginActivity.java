@@ -31,6 +31,7 @@ import com.twitter.sdk.android.core.TwitterAuthConfig;
 import com.twitter.sdk.android.core.TwitterException;
 import com.twitter.sdk.android.core.TwitterSession;
 import com.twitter.sdk.android.core.identity.TwitterLoginButton;
+import com.microsoft.windowsazure.mobileservices.*;
 
 import io.fabric.sdk.android.Fabric;
 
